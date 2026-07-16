@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Víbora Correntina · Gear</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --shell-black:#1c1c1e;
+    --shell-dark:#0c0c0e;
+    --shell-mid:#2c2c30;
+    --shell-light:#46464c;
+    --red:#e8384f;
+    --grass-light:#9ccc65;
+    --grass-dark:#8bc34a;
+    --topbar:#3e6b25;
+    --topbar-dark:#335a1e;
+    --ink:#f4fff0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;margin:0;}
+  body{
+    min-height:100dvh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    background:radial-gradient(ellipse at 50% 0%, #33342e 0%, #14140f 70%);
+    font-family:'VT323', monospace;
+    color:var(--ink);
+    padding:16px;
+  }
+  .px{font-family:'Press Start 2P', monospace;}
+
+  /* ===================== CONSOLE SHELL (vertical handheld, brick-game style) ===================== */
+  .console{
+    width:min(92vw, 360px);
+    background:linear-gradient(160deg, var(--shell-light) 0%, var(--shell-black) 55%, var(--shell-dark) 100%);
+    border-radius:26px;
+    padding:16px 16px 20px;
+    box-shadow:0 12px 0 #000, 0 20px 34px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.06);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .console-top{
+    display:flex;align-items:center;justify-content:space-between;padding:0 6px;
+  }
+  .brand{
+    display:flex;align-items:center;gap:8px;
+  }
+  .power-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px 2px rgba(232,56,79,.7);}
+  .brand-text{font-size:11px;letter-spacing:1px;color:#c7c7cf;}
+  .brand-text b{color:var(--red);}
+  .volume-dial{
+    width:20px;height:20px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #55555c, #17171a 75%);
+    box-shadow:inset 0 0 0 2px #000;
+    position:relative;
+  }
+  .volume-dial::after{
+    content:"";position:absolute;top:2px;left:50%;width:2px;height:6px;background:#aaa;transform:translateX(-50%);
+  }
+
+  /* screen */
+  .screen-wrap{
+    background:#0a0a0c;
+    border-radius:9px;
+    padding:10px;
+    box-shadow:inset 0 0 0 2px #000, inset 0 0 16px rgba(0,0,0,.6);
+    position:relative;
+  }
+  .screen-hud{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--topbar);
+    border-radius:5px 5px 0 0;
+    padding:6px 10px;
+    font-size:15px;
+  }
+  .hud-group{display:flex;align-items:center;gap:5px;}
+  .hud-icon{font-size:16px;}
+  #muteBtn{background:none;border:none;color:var(--ink);font-size:17px;cursor:pointer;padding:0;}
+
+  canvas{
+    display:block;width:100%;aspect-ratio:18/13;background:var(--grass-light);border-radius:0 0 5px 5px;
+  }
+
+  .overlay{
+    position:absolute;left:10px;right:10px;top:calc(10px + 32px);bottom:10px;
+    background:rgba(10,20,8,.94);
+    border-radius:0 0 5px 5px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:9px;padding:12px;text-align:center;overflow:auto;
+  }
+  .overlay.hidden{display:none;}
+  .overlay h2{font-size:clamp(10px,3.4vw,13px);margin:0;color:var(--grass-light);text-shadow:0 0 6px rgba(156,204,101,.6);line-height:1.5;}
+  .overlay p{font-size:14px;margin:0;max-width:94%;line-height:1.45;}
+  .blink{animation:blink 1s steps(1) infinite;}
+  @keyframes blink{50%{opacity:.2;}}
+
+  .species-row-inline{
+    display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:100%;
+  }
+  .species-chip{
+    width:30px;height:30px;border-radius:50%;border:2px solid transparent;
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    background:rgba(255,255,255,.08);cursor:pointer;
+  }
+  .species-chip.selected{border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.6);}
+
+  .name-input{
+    font-family:'VT323',monospace;font-size:17px;
+    background:#0d1f08;border:2px solid var(--grass-light);color:var(--ink);
+    padding:5px 9px;border-radius:4px;text-align:center;width:74%;max-width:200px;
+    text-transform:uppercase;
+  }
+  .name-input:focus{outline:none;box-shadow:0 0 6px var(--grass-light);}
+
+  .mini-btn{
+    font-family:'Press Start 2P',monospace;font-size:8px;
+    background:var(--grass-light);color:#123;
+    border:none;border-radius:4px;padding:8px 12px;
+    box-shadow:0 3px 0 rgba(0,0,0,.4);
+  }
+  .mini-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.4);}
+
+  .leaderboard{width:100%;max-width:230px;text-align:left;font-size:14px;}
+  .leaderboard li{display:flex;justify-content:space-between;padding:2px 4px;}
+  .leaderboard li:nth-child(odd){background:rgba(255,255,255,.05);}
+  .leaderboard{list-style:none;padding:0;margin:0;}
+
+  /* console label under the screen, like "CLASSIC" on the reference device */
+  .console-label{
+    text-align:center;font-size:12px;letter-spacing:3px;color:#d7d7de;
+    text-shadow:0 1px 0 #000;
+  }
+
+  /* LED indicator row, like ON/OFF · SOUND · S/P · RESET */
+  .led-row{
+    display:flex;justify-content:space-between;padding:2px 10px;
+  }
+  .led-item{
+    display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;background:none;border:none;font-family:inherit;color:inherit;
+  }
+  .led-dot{
+    width:9px;height:9px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#5a4b12,#2c2306 75%);
+    box-shadow:inset 0 0 0 1px #000;
+  }
+  .led-item.lit .led-dot{
+    background:radial-gradient(circle at 35% 30%,#ffe066,#c9a227 75%);
+    box-shadow:0 0 6px 2px rgba(255,224,102,.75), inset 0 0 0 1px #000;
+  }
+  .led-label{font-size:9px;letter-spacing:.5px;color:#b9b9c1;}
+
+  /* controls row: joystick (palanca) + rotate button */
+  .controls-row{
+    display:flex;align-items:center;justify-content:space-between;padding:6px 4px 0;
+  }
+
+  .joystick{
+    width:104px;height:104px;border-radius:50%;
+    touch-action:none;cursor:grab;
+    background:
+      repeating-conic-gradient(from 0deg, rgba(255,255,255,.04) 0deg 6deg, transparent 6deg 30deg),
+      radial-gradient(circle at 50% 50%, var(--shell-mid) 0%, var(--shell-black) 62%, var(--shell-dark) 100%);
+    box-shadow:inset 0 0 0 3px #000, inset 0 6px 14px rgba(0,0,0,.75), 0 3px 0 rgba(0,0,0,.5);
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .joystick:active{cursor:grabbing;}
+  .joystick-base-ring{
+    position:absolute;width:100%;height:100%;border-radius:50%;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.05);
+    pointer-events:none;
+  }
+  .joystick-stick{
+    width:48px;height:48px;border-radius:50%;
+    background:radial-gradient(circle at 35% 28%, #ff6b7a, var(--red) 55%, #7c1626 100%);
+    box-shadow:0 5px 0 #4a0e17, inset 0 3px 4px rgba(255,255,255,.35), 0 0 0 3px rgba(0,0,0,.4);
+    pointer-events:none;
+    transition:transform .08s ease-out;
+    position:relative;
+  }
+  .joystick-stick::after{
+    content:"";position:absolute;inset:0;margin:auto;width:14px;height:14px;border-radius:50%;
+    background:rgba(0,0,0,.25);
+  }
+  .joystick.dragging .joystick-stick{transition:none;}
+
+  .rotate-wrap{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+  }
+  .rotate-btn{
+    width:64px;height:64px;border-radius:50%;border:none;color:#fff;font-size:20px;
+    background:radial-gradient(circle at 35% 30%, #5578c9, #1d2c56 85%);
+    box-shadow:0 5px 0 #10193a, inset 0 2px 3px rgba(255,255,255,.25);
+    touch-action:manipulation;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .rotate-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #10193a;}
+  .rotate-label{font-size:8px;letter-spacing:2px;color:#9aa0ad;}
+
+  /* footer plate on the console, like BRICK GAME / 9999IN1 */
+  .console-footer{
+    display:flex;align-items:center;justify-content:space-between;padding:4px 8px 0;
+  }
+  .footer-mouse{font-size:20px;}
+  .footer-title{font-size:13px;line-height:1.3;color:#e6e6ec;text-align:right;}
+  .footer-sub{display:none;}
+
+  /* ===================== SPECIES INFO CARD (educational, lives inside the screen) ===================== */
+  .species-info{
+    width:100%;max-width:280px;
+    background:rgba(255,255,255,.06);border:1px solid rgba(156,204,101,.35);border-radius:8px;
+    padding:8px 10px;display:flex;flex-direction:column;gap:4px;text-align:left;
+  }
+  .info-header{display:flex;align-items:center;gap:7px;}
+  .info-icon{font-size:18px;flex:0 0 auto;}
+  .info-name-wrap{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;}
+  .info-name{margin:0;font-size:11px;color:var(--grass-light);letter-spacing:.5px;}
+  .info-scientific{font-style:italic;font-size:12px;color:#a8ae9a;}
+  .info-badge{
+    flex:0 0 auto;font-family:'Press Start 2P',monospace;font-size:6.5px;
+    padding:5px 6px;border-radius:4px;text-align:center;white-space:nowrap;
+    color:#1a1a1a;
+  }
+  .info-badge.venomous{background:#e8384f;color:#fff;}
+  .info-badge.mild{background:#e8c547;}
+  .info-badge.harmless{background:var(--grass-light);}
+  .info-meta{font-size:12px;color:#c7ccb8;}
+  .info-meta b{color:#e6ecd8;}
+  .info-fact{font-size:13px;line-height:1.4;color:#e9ede0;margin:1px 0 0;}
+
+  .footer-credit{
+    color:#9aa08c;font-size:14px;text-align:center;max-width:420px;line-height:1.7;
+  }
+  .footer-credit a{color:#c4e392;text-decoration:none;}
+  .footer-credit a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+
+  <div class="console">
+    <div class="console-top">
+      <div class="brand"><span class="power-dot"></span><span class="brand-text">VÍBORA <b>GEAR</b></span></div>
+      <div class="volume-dial"></div>
+    </div>
+
+    <div class="screen-wrap">
+      <div class="screen-hud">
+        <div class="hud-group"><span class="hud-icon">🐛</span><span id="foodCount">0</span></div>
+        <div class="hud-group"><span class="hud-icon">🏆</span><span id="bestCount">0</span></div>
+        <button id="muteBtn" aria-label="Sonido">🔊</button>
+      </div>
+      <canvas id="board"></canvas>
+
+      <div class="overlay" id="startOverlay">
+        <h2>VÍBORA<br>CORRENTINA</h2>
+        <p>Comé los bichitos de los esteros<br>sin chocarte ni morderte la cola</p>
+        <p class="px" style="font-size:8px;">ELEGÍ TU VÍBORA</p>
+        <div class="species-row-inline" id="startSpeciesRow"></div>
+
+        <div class="species-info" id="speciesInfo">
+          <div class="info-header">
+            <span class="info-icon" id="infoIcon">🐍</span>
+            <div class="info-name-wrap">
+              <h4 class="info-name px" id="infoName">Yarará</h4>
+              <span class="info-scientific" id="infoScientific">Bothrops alternatus</span>
+            </div>
+            <span class="info-badge" id="infoBadge">VENENOSA</span>
+          </div>
+          <div class="info-meta"><b>Hábitat:</b> <span id="infoHabitat"></span></div>
+          <p class="info-fact" id="infoFact"></p>
+        </div>
+
+        <button class="mini-btn" id="btnPlay">▶ EMPEZAR</button>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <h2 class="px" style="font-size:10px;">FIN DEL JUEGO</h2>
+        <p id="finalScoreText">Puntaje: 0</p>
+        <input type="text" id="nameInput" class="name-input" maxlength="12" placeholder="TU NOMBRE">
+        <button class="mini-btn" id="btnSave">GUARDAR RÉCORD</button>
+        <ul class="leaderboard" id="leaderboardList"></ul>
+        <button class="mini-btn" id="btnRetry">▶ JUGAR DE NUEVO</button>
+      </div>
+    </div>
+
+    <div class="console-label px">CLASSIC</div>
+
+    <div class="led-row">
+      <button class="led-item" id="ledPower" aria-label="Encendido"><span class="led-dot"></span><span class="led-label">ON/OFF</span></button>
+      <button class="led-item" id="ledSound" aria-label="Sonido"><span class="led-dot"></span><span class="led-label">SOUND</span></button>
+      <button class="led-item" id="ledPause" aria-label="Pausa"><span class="led-dot"></span><span class="led-label">S/P</span></button>
+      <button class="led-item" id="ledReset" aria-label="Reiniciar"><span class="led-dot"></span><span class="led-label">RESET</span></button>
+    </div>
+
+    <div class="controls-row">
+      <div class="joystick" id="joystick" aria-label="Palanca de dirección">
+        <div class="joystick-base-ring"></div>
+        <div class="joystick-stick" id="joystickStick"></div>
+      </div>
+      <div class="rotate-wrap">
+        <button class="rotate-btn" id="btnPause" aria-label="Pausa">⏸</button>
+        <span class="rotate-label px">PAUSE</span>
+      </div>
+    </div>
+
+    <div class="console-footer">
+      <span class="footer-mouse">🐍</span>
+      <span class="footer-title px">VÍBORA<br>GAME</span>
+    </div>
+  </div>
+
+  <p class="footer-credit">
+    Un juego educativo sobre la fauna de los esteros correntinos<br>
+    <a href="https://www.instagram.com/didactica_aumentada3.0/" target="_blank" rel="noopener">@didactica_aumentada3.0</a>
+    &nbsp;·&nbsp;
+    <a href="https://www.instagram.com/codeclubnanduti/" target="_blank" rel="noopener">@codeclubnanduti</a>
+  </p>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- Species data ----------------
+  const SPECIES = [
+    {id:"yarara", name:"Yarará", body:"#8d6e4a", pattern:"#5c4326",
+      sci:"Bothrops alternatus", icon:"🐍", venom:"venomous", venomLabel:"VENENOSA",
+      habitat:"Pastizales, bañados y bordes de esteros de Corrientes y todo el litoral.",
+      fact:"También la llaman 'víbora de la cruz' por las marcas blancas en forma de cruz que tiene en la cabeza. Detecta a sus presas gracias a unas fosetas sensibles al calor que tiene entre el ojo y el hocico. No es agresiva, pero si se siente pisada o acorralada puede morder para defenderse, así que en el campo conviene mirar bien dónde se pisa."},
+    {id:"curiyu", name:"Curiyú", body:"#e8c547", pattern:"#2b2b2b",
+      sci:"Eunectes notaeus", icon:"🟡", venom:"harmless", venomLabel:"NO VENENOSA",
+      habitat:"Esteros, lagunas y bañados del Iberá; muy ligada al agua.",
+      fact:"Es la serpiente más grande de Argentina: puede superar los 4 metros. Es una boa constrictora, así que no tiene veneno: enrosca su cuerpo alrededor de la presa para inmovilizarla antes de tragarla entera. Es mansa con las personas y clave para el equilibrio de los Esteros del Iberá."},
+    {id:"nacanina", name:"Ñacaniná", body:"#6b7a5e", pattern:"#34402c",
+      sci:"Hydrodynastes gigas", icon:"🟢", venom:"mild", venomLabel:"LEVEMENTE VENENOSA",
+      habitat:"Lagunas, arroyos y pastizales inundables de los esteros correntinos.",
+      fact:"Cuando se siente amenazada, achata el cuello y levanta la parte delantera del cuerpo imitando a una cobra, aunque no lo es. Tiene colmillos ubicados atrás en la boca y su saliva es apenas tóxica, por lo que casi no representa riesgo para las personas. Es una gran nadadora y caza peces, ranas y roedores."},
+    {id:"verde", name:"Culebra verde", body:"#4caf50", pattern:"#215c2b",
+      sci:"Philodryas aestiva", icon:"🍃", venom:"mild", venomLabel:"LEVEMENTE VENENOSA",
+      habitat:"Árboles y arbustos cerca de esteros, montes y bordes de selva.",
+      fact:"Es una culebra esbelta y trepadora, de color verde brillante que le sirve de camuflaje entre las hojas. Igual que la ñacaniná, tiene colmillos traseros y una saliva apenas tóxica pensada para reducir a sus presas (lagartijas, ranas y pequeños roedores), no para defenderse de personas."},
+    {id:"coral", name:"Falsa coral", body:"#c0392b", pattern:"#111111",
+      sci:"Oxyrhopus rhombifer", icon:"🔴", venom:"harmless", venomLabel:"NO VENENOSA",
+      habitat:"Pastizales, montes y zonas cercanas al agua en todo Corrientes.",
+      fact:"Copia los colores de la verdadera coral (roja, negra y blanca) como estrategia para asustar a sus depredadores, aunque no tiene veneno peligroso. Por esa confusión mucha gente la mata sin necesidad: aprender a diferenciarla ayuda a protegerla."},
+    {id:"cascabel", name:"Cascabel", body:"#c9a35a", pattern:"#7a5a2a",
+      sci:"Crotalus durissus terrificus", icon:"🐍", venom:"venomous", venomLabel:"VENENOSA",
+      habitat:"Zonas más secas: pastizales, sabanas y montecitos de Corrientes.",
+      fact:"Es una de las serpientes más peligrosas de Sudamérica: su veneno actúa sobre el sistema nervioso. Tiene un cascabel en la punta de la cola, formado por anillos que se suman en cada muda de piel, y lo agita para avisar antes de atacar. Prefiere avisar y huir antes que morder."}
+  ];
+  let selectedSpecies = SPECIES[0];
+
+  const startSpeciesRow = document.getElementById("startSpeciesRow");
+
+  SPECIES.forEach(function(sp){
+    const chip = document.createElement("div");
+    chip.className = "species-chip" + (sp.id===selectedSpecies.id ? " selected" : "");
+    chip.dataset.id = sp.id;
+    chip.style.background = sp.body;
+    chip.title = sp.name;
+    chip.addEventListener("click", function(){ selectSpecies(sp.id); });
+    startSpeciesRow.appendChild(chip);
+  });
+
+  function selectSpecies(id){
+    if(state === "playing") return;
+    selectedSpecies = SPECIES.find(function(s){ return s.id===id; }) || SPECIES[0];
+    document.querySelectorAll(".species-chip").forEach(function(c){ c.classList.toggle("selected", c.dataset.id===id); });
+    updateSpeciesInfo(selectedSpecies);
+  }
+
+  function updateSpeciesInfo(sp){
+    document.getElementById("infoIcon").textContent = sp.icon;
+    document.getElementById("infoName").textContent = sp.name;
+    document.getElementById("infoScientific").textContent = sp.sci;
+    document.getElementById("infoHabitat").textContent = sp.habitat;
+    document.getElementById("infoFact").textContent = sp.fact;
+    const badge = document.getElementById("infoBadge");
+    badge.textContent = sp.venomLabel;
+    badge.className = "info-badge " + sp.venom;
+  }
+
+  // ---------------- Canvas / grid setup ----------------
+  const canvas = document.getElementById("board");
+  const ctx = canvas.getContext("2d");
+  const COLS = 18, ROWS = 13;
+  let cellSize = 20;
+
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    cellSize = rect.width / COLS;
+    render();
+  }
+  window.addEventListener("resize", resizeCanvas);
+  window.addEventListener("orientationchange", function(){ setTimeout(resizeCanvas,200); });
+
+  // ---------------- Game state ----------------
+  let state = "start"; // start | playing | paused | gameover
+  let snake, dir, nextDir, food, score, best, speedMs, gameTimer, muted, ambientT, powerOn;
+
+  const FOOD_ICONS = ["🐜","🦋","🐌","🐝","🐛","🐸","🐟","🐞"];
+  let records = []; // session leaderboard [{name,score}]
+
+  function resetState(){
+    snake = [{x:9,y:6},{x:8,y:6},{x:7,y:6}];
+    dir = {x:1,y:0};
+    nextDir = {x:1,y:0};
+    score = 0;
+    speedMs = 260;
+    document.getElementById("foodCount").textContent = "0";
+    spawnFood();
+  }
+
+  function spawnFood(){
+    let pos;
+    do{
+      pos = {x:Math.floor(Math.random()*COLS), y:Math.floor(Math.random()*ROWS)};
+    } while(snake.some(function(s){ return s.x===pos.x && s.y===pos.y; }));
+    food = {x:pos.x, y:pos.y, icon:FOOD_ICONS[Math.floor(Math.random()*FOOD_ICONS.length)]};
+  }
+
+  // ---------------- Audio ----------------
+  let actx = null;
+  function ensureAudio(){
+    if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if(actx.state === "suspended") actx.resume();
+    return actx;
+  }
+  function beep(freq,dur,type){
+    if(muted) return;
+    try{
+      const ac = ensureAudio();
+      const o = ac.createOscillator(); const g = ac.createGain();
+      o.type = type||"square"; o.frequency.value = freq; g.gain.value=0.06;
+      o.connect(g); g.connect(ac.destination);
+      o.start(); g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+dur);
+      o.stop(ac.currentTime+dur);
+    }catch(e){}
+  }
+  // low-level note player used by the music sequencer and the jingles
+  function playNote(freq,dur,type,vol){
+    if(muted || !freq) return;
+    try{
+      const ac = ensureAudio();
+      const o = ac.createOscillator(); const g = ac.createGain();
+      o.type = type||"square"; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, ac.currentTime);
+      o.connect(g); g.connect(ac.destination);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime+dur);
+      o.stop(ac.currentTime+dur);
+    }catch(e){}
+  }
+
+  // ---- 16-bit style background music loop (chiptune sequencer) ----
+  const STEP_MS = 160;
+  // simple two-bar melody/bass over a pentatonic scale, 0 = silencio
+  const MUSIC_MELODY = [659,0,784,659, 0,880,784,659, 523,0,659,523, 0,587,523,0,
+                         659,0,784,659, 0,880,988,880, 784,0,659,784, 0,659,523,0];
+  const MUSIC_BASS =   [165,0,165,0, 175,0,175,0, 131,0,131,0, 147,0,147,0,
+                         165,0,165,0, 175,0,175,0, 196,0,196,0, 175,0,165,0];
+  let musicPlaying = false;
+  let musicStep = 0;
+  let musicTimer = null;
+
+  function musicTick(){
+    if(!musicPlaying) return;
+    const m = MUSIC_MELODY[musicStep % MUSIC_MELODY.length];
+    const b = MUSIC_BASS[musicStep % MUSIC_BASS.length];
+    if(m) playNote(m, (STEP_MS/1000)*0.85, "square", 0.045);
+    if(b) playNote(b, (STEP_MS/1000)*0.9, "triangle", 0.06);
+    musicStep++;
+    musicTimer = setTimeout(musicTick, STEP_MS);
+  }
+  function startMusic(){
+    if(musicPlaying || muted) return;
+    musicPlaying = true;
+    musicTick();
+  }
+  function stopMusic(){
+    musicPlaying = false;
+    clearTimeout(musicTimer);
+  }
+
+  // ---- distinct "game over" jingle, separate tone from gameplay music ----
+  function playGameOverJingle(){
+    if(muted) return;
+    const notes = [
+      {f:392, d:0.16}, {f:349, d:0.16}, {f:294, d:0.16}, {f:262, d:0.16}, {f:196, d:0.5}
+    ];
+    let t = 0;
+    notes.forEach(function(n){
+      setTimeout(function(){ playNote(n.f, n.d, "sawtooth", 0.08); }, t*1000);
+      t += n.d;
+    });
+  }
+
+  muted = false;
+  function setMuteUI(){
+    document.getElementById("muteBtn").textContent = muted ? "🔇" : "🔊";
+    document.getElementById("ledSound").classList.toggle("lit", !muted);
+  }
+  function handleMuteToggle(){
+    if(muted){ stopMusic(); }
+    else if(state === "playing"){ startMusic(); }
+  }
+  document.getElementById("muteBtn").addEventListener("click", function(){ muted=!muted; setMuteUI(); handleMuteToggle(); });
+  document.getElementById("ledSound").addEventListener("click", function(){ muted=!muted; setMuteUI(); handleMuteToggle(); });
+
+  // ---------------- Rendering ----------------
+  function drawBackground(){
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        ctx.fillStyle = ((x+y)%2===0) ? "#9ccc65" : "#8bc34a";
+        ctx.fillRect(x*cellSize, y*cellSize, cellSize, cellSize);
+      }
+    }
+    // subtle flora silhouettes in corners
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = "#5c8a3a";
+    drawLeaf(2*cellSize, 1*cellSize, cellSize*1.4);
+    drawLeaf((COLS-3)*cellSize, (ROWS-2)*cellSize, cellSize*1.6);
+    ctx.globalAlpha = 1;
+
+    // ambient bird drifting across the top
+    ambientT += 1;
+    const bx = ((ambientT*0.6) % (COLS*cellSize + 60)) - 40;
+    const by = cellSize*1.2 + Math.sin(ambientT*0.05)*4;
+    ctx.font = (cellSize*0.9)+"px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.globalAlpha = 0.55;
+    ctx.fillText("🐦", bx, by);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawLeaf(cx,cy,size){
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, size*0.5, size*0.28, Math.PI/4, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawSnake(){
+    for(let i=snake.length-1;i>=0;i--){
+      const seg = snake[i];
+      const px = seg.x*cellSize, py = seg.y*cellSize;
+      const pad = cellSize*0.08;
+      ctx.fillStyle = selectedSpecies.body;
+      roundRect(ctx, px+pad, py+pad, cellSize-pad*2, cellSize-pad*2, cellSize*0.28);
+      ctx.fill();
+      if(i>0){
+        ctx.fillStyle = selectedSpecies.pattern;
+        const p2 = cellSize*0.32;
+        roundRect(ctx, px+p2, py+p2, cellSize-p2*2, cellSize-p2*2, cellSize*0.16);
+        ctx.fill();
+      }
+    }
+    // head eyes
+    const head = snake[0];
+    const hx = head.x*cellSize, hy = head.y*cellSize;
+    ctx.fillStyle = "#fff";
+    const eyeOffX = dir.x!==0 ? dir.x*cellSize*0.18 : 0;
+    const eyeOffY = dir.y!==0 ? dir.y*cellSize*0.18 : 0;
+    ctx.beginPath();
+    ctx.arc(hx+cellSize*0.32+eyeOffX, hy+cellSize*0.32+eyeOffY, cellSize*0.09, 0, Math.PI*2);
+    ctx.arc(hx+cellSize*0.68+eyeOffX, hy+cellSize*0.32+eyeOffY, cellSize*0.09, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(hx+cellSize*0.32+eyeOffX, hy+cellSize*0.32+eyeOffY, cellSize*0.045, 0, Math.PI*2);
+    ctx.arc(hx+cellSize*0.68+eyeOffX, hy+cellSize*0.32+eyeOffY, cellSize*0.045, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function roundRect(c,x,y,w,h,r){
+    c.beginPath();
+    c.moveTo(x+r,y);
+    c.arcTo(x+w,y,x+w,y+h,r);
+    c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r);
+    c.arcTo(x,y,x+w,y,r);
+    c.closePath();
+  }
+
+  function drawFood(){
+    ctx.font = (cellSize*0.85)+"px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(food.icon, food.x*cellSize+cellSize/2, food.y*cellSize+cellSize/2+1);
+  }
+
+  function render(){
+    drawBackground();
+    if(state!=="start"){
+      drawFood();
+      drawSnake();
+    }
+  }
+
+  // ---------------- Game loop ----------------
+  function tick(){
+    dir = nextDir;
+    const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+    if(head.x<0 || head.x>=COLS || head.y<0 || head.y>=ROWS || snake.some(function(s){return s.x===head.x && s.y===head.y;})){
+      gameOver();
+      return;
+    }
+
+    snake.unshift(head);
+
+    if(head.x===food.x && head.y===food.y){
+      score++;
+      document.getElementById("foodCount").textContent = score;
+      if(score > best){ best = score; document.getElementById("bestCount").textContent = best; }
+      beep(760,0.07);
+      speedMs = Math.max(95, speedMs - 4);
+      spawnFood();
+    } else {
+      snake.pop();
+    }
+
+    render();
+    gameTimer = setTimeout(tick, speedMs);
+  }
+
+  function startLoop(){
+    clearTimeout(gameTimer);
+    gameTimer = setTimeout(tick, speedMs);
+  }
+
+  // ---------------- Flow control ----------------
+  function startGame(){
+    document.getElementById("startOverlay").classList.add("hidden");
+    document.getElementById("gameOverOverlay").classList.add("hidden");
+    resetState();
+    if(best===undefined) best = 0;
+    document.getElementById("bestCount").textContent = best;
+    state = "playing";
+    document.getElementById("ledPause").classList.remove("lit");
+    render();
+    startLoop();
+    musicStep = 0;
+    startMusic();
+  }
+
+  function gameOver(){
+    clearTimeout(gameTimer);
+    state = "gameover";
+    stopMusic();
+    playGameOverJingle();
+    document.getElementById("finalScoreText").textContent = "Puntaje: " + score;
+    document.getElementById("nameInput").value = "";
+    renderLeaderboard();
+    document.getElementById("gameOverOverlay").classList.remove("hidden");
+  }
+
+  function togglePause(){
+    if(!powerOn) return;
+    if(state==="playing"){
+      state = "paused";
+      clearTimeout(gameTimer);
+      stopMusic();
+      document.getElementById("ledPause").classList.add("lit");
+    } else if(state==="paused"){
+      state = "playing";
+      document.getElementById("ledPause").classList.remove("lit");
+      startLoop();
+      startMusic();
+    }
+  }
+
+  function togglePower(){
+    powerOn = !powerOn;
+    document.getElementById("ledPower").classList.toggle("lit", powerOn);
+    document.querySelector(".console").style.filter = powerOn ? "none" : "brightness(.45)";
+    if(!powerOn && state==="playing"){
+      state = "paused";
+      clearTimeout(gameTimer);
+      stopMusic();
+      document.getElementById("ledPause").classList.add("lit");
+    }
+  }
+
+  function renderLeaderboard(){
+    const list = document.getElementById("leaderboardList");
+    list.innerHTML = "";
+    if(records.length===0){
+      const li = document.createElement("li");
+      li.textContent = "Sin récords todavía";
+      list.appendChild(li);
+      return;
+    }
+    records.forEach(function(r){
+      const li = document.createElement("li");
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = r.name;
+      const scoreSpan = document.createElement("span");
+      scoreSpan.textContent = r.score;
+      li.appendChild(nameSpan);
+      li.appendChild(scoreSpan);
+      list.appendChild(li);
+    });
+  }
+
+  function saveRecord(){
+    const input = document.getElementById("nameInput");
+    let name = (input.value || "").trim().toUpperCase().slice(0,12);
+    if(!name) name = "JUGADOR";
+    records.push({name:name, score:score});
+    records.sort(function(a,b){ return b.score - a.score; });
+    records = records.slice(0,5);
+    renderLeaderboard();
+    input.value = "";
+  }
+
+  // ---------------- Input ----------------
+  function setDir(newDir){
+    if(state!=="playing") return;
+    const opposite = (dir.x===-newDir.x && dir.x!==0) || (dir.y===-newDir.y && dir.y!==0);
+    if(!opposite){ nextDir = newDir; }
+  }
+
+  const DIRS = {up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0}};
+
+  // ---- joystick (palanca) ----
+  const joystick = document.getElementById("joystick");
+  const stick = document.getElementById("joystickStick");
+  let dragging = false;
+
+  function joystickCenter(){
+    const r = joystick.getBoundingClientRect();
+    return {cx:r.left+r.width/2, cy:r.top+r.height/2, radius:r.width/2};
+  }
+
+  function moveStick(clientX, clientY){
+    const c = joystickCenter();
+    const dx = clientX - c.cx, dy = clientY - c.cy;
+    const dist = Math.hypot(dx,dy);
+    const maxDist = c.radius*0.55;
+    const clamped = Math.min(dist, maxDist);
+    const angle = Math.atan2(dy,dx);
+    const sx = Math.cos(angle)*clamped, sy = Math.sin(angle)*clamped;
+    stick.style.transform = "translate("+sx.toFixed(1)+"px,"+sy.toFixed(1)+"px)";
+
+    const deadZone = c.radius*0.22;
+    if(dist > deadZone){
+      const deg = angle*180/Math.PI;
+      let direction;
+      if(deg>=-45 && deg<45) direction="right";
+      else if(deg>=45 && deg<135) direction="down";
+      else if(deg<=-45 && deg>-135) direction="up";
+      else direction="left";
+      setDir(DIRS[direction]);
+    }
+  }
+
+  function resetStick(){
+    stick.style.transform = "translate(0,0)";
+  }
+
+  joystick.addEventListener("pointerdown", function(e){
+    dragging = true;
+    joystick.classList.add("dragging");
+    try{ joystick.setPointerCapture(e.pointerId); }catch(err){}
+    moveStick(e.clientX, e.clientY);
+  });
+  joystick.addEventListener("pointermove", function(e){
+    if(dragging) moveStick(e.clientX, e.clientY);
+  });
+  function endDrag(){
+    if(dragging){ dragging = false; joystick.classList.remove("dragging"); resetStick(); }
+  }
+  joystick.addEventListener("pointerup", endDrag);
+  joystick.addEventListener("pointercancel", endDrag);
+  window.addEventListener("pointerup", endDrag);
+
+  window.addEventListener("keydown", function(e){
+    const map = {ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right"};
+    if(map[e.key]){ e.preventDefault(); setDir(DIRS[map[e.key]]); }
+    else if(e.key===" " || e.key==="p" || e.key==="P"){ togglePause(); }
+    else if(e.key==="Enter" && state==="start"){ startGame(); }
+  });
+
+  // swipe controls on canvas
+  let touchStart = null;
+  canvas.addEventListener("touchstart", function(e){
+    const t = e.changedTouches[0];
+    touchStart = {x:t.clientX, y:t.clientY};
+  }, {passive:true});
+  canvas.addEventListener("touchend", function(e){
+    if(!touchStart) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.x;
+    const dy = t.clientY - touchStart.y;
+    if(Math.abs(dx) > Math.abs(dy)){
+      if(Math.abs(dx) > 20) setDir(dx>0 ? DIRS.right : DIRS.left);
+    } else {
+      if(Math.abs(dy) > 20) setDir(dy>0 ? DIRS.down : DIRS.up);
+    }
+    touchStart = null;
+  }, {passive:true});
+
+  document.getElementById("btnPlay").addEventListener("click", startGame);
+  document.getElementById("btnRetry").addEventListener("click", startGame);
+  document.getElementById("btnSave").addEventListener("click", saveRecord);
+  document.getElementById("btnPause").addEventListener("click", togglePause);
+  document.getElementById("ledPause").addEventListener("click", togglePause);
+  document.getElementById("ledReset").addEventListener("click", startGame);
+  document.getElementById("ledPower").addEventListener("click", togglePower);
+
+  // ---------------- Init ----------------
+  ambientT = 0;
+  best = 0;
+  powerOn = true;
+  document.getElementById("ledPower").classList.add("lit");
+  setMuteUI();
+  updateSpeciesInfo(selectedSpecies);
+  resetState();
+  requestAnimationFrame(function boot(){
+    resizeCanvas();
+  });
+  setInterval(function(){ if(state!=="playing"){ render(); } }, 90); // keep ambient bg animated on start/gameover screens
+})();
+</script>
+</body>
+</html>
